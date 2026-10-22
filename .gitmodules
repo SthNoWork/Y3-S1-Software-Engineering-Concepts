@@ -1,0 +1,3 @@
+[submodule "sales-report-repo"]
+	path = sales-report-repo
+	url = https://github.com/SthNoWork/sales-report-repo.git
