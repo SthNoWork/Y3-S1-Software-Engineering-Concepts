@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Angkor Mart - Monthly Sales Report</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 30px; background: #f8fafc; color: #1e293b; }
+        h1, h2 { color: #0f172a; }
+        .filter-card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 25px; }
+        .form-group { display: inline-block; margin-right: 20px; }
+        label { font-weight: bold; margin-right: 8px; }
+        input, select, button { padding: 8px 14px; font-size: 14px; border: 1px solid #cbd5e1; border-radius: 6px; }
+        button { background: #2563eb; color: white; border: none; cursor: pointer; }
+        button:hover { background: #1d4ed8; }
+        .error-banner { background: #fee2e2; border-left: 4px solid #ef4444; color: #991b1b; padding: 12px 16px; border-radius: 4px; margin-bottom: 20px; }
+        .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 25px; }
+        .metric-card { background: white; padding: 18px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .metric-title { font-size: 13px; text-transform: uppercase; color: #64748b; font-weight: 600; margin-bottom: 5px; }
+        .metric-value { font-size: 24px; font-weight: bold; color: #0f172a; }
+        table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 25px; }
+        th, td { padding: 12px 16px; text-align: left; border-bottom: 1px solid #e2e8f0; }
+        th { background: #f1f5f9; font-size: 13px; text-transform: uppercase; color: #475569; }
+        tr:hover { background: #f8fafc; }
+        .tables-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    </style>
+</head>
+<body>
+    <h1>Angkor Mart Monthly Sales Report</h1>
+
+    <div class="filter-card">
+        <form method="get" action="/report">
+            <div class="form-group">
+                <label for="month">Month:</label>
+                <input type="text" id="month" name="month" th:value="${selectedMonth}" placeholder="yyyy-MM" required />
+            </div>
+            <div class="form-group">
+                <label for="branch">Branch:</label>
+                <select id="branch" name="branch">
+                    <option value="ALL" th:selected="${selectedBranch == 'ALL'}">ALL</option>
+                    <option value="PNH" th:selected="${selectedBranch == 'PNH'}">PNH</option>
+                    <option value="REP" th:selected="${selectedBranch == 'REP'}">REP</option>
+                    <option value="BTB" th:selected="${selectedBranch == 'BTB'}">BTB</option>
+                </select>
+            </div>
+            <button type="submit">Filter Report</button>
+        </form>
+    </div>
+
+    <div th:if="${error}" class="error-banner">
+        <strong>Error:</strong> <span th:text="${error}"></span>
+    </div>
+
+    <div th:if="${summary != null}">
+        <div class="metrics-grid">
+            <div class="metric-card">
+                <div class="metric-title">Total Revenue</div>
+                <div class="metric-value" th:text="'$' + ${#numbers.formatDecimal(summary.totalRevenue, 1, 'COMMA', 2, 'POINT')}"></div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-title">Total Discounts</div>
+                <div class="metric-value" th:text="'$' + ${#numbers.formatDecimal(summary.totalDiscount, 1, 'COMMA', 2, 'POINT')}"></div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-title">Distinct Receipts</div>
+                <div class="metric-value" th:text="${summary.receiptCount}"></div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-title">Average Basket</div>
+                <div class="metric-value" th:text="'$' + ${#numbers.formatDecimal(summary.averageBasket, 1, 'COMMA', 2, 'POINT')}"></div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-title">Rejected Rows</div>
+                <div class="metric-value" th:text="${summary.rejectedCount}"></div>
+            </div>
+        </div>
+
+        <div class="tables-row">
+            <div>
+                <h2>Revenue by Category</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Category</th>
+                            <th>Revenue (USD)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="entry : ${summary.revenueByCategory}">
+                            <td th:text="${entry.key}"></td>
+                            <td th:text="'$' + ${#numbers.formatDecimal(entry.value, 1, 'COMMA', 2, 'POINT')}"></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div>
+                <h2>Top 10 Products by Revenue</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>SKU</th>
+                            <th>Product</th>
+                            <th>Category</th>
+                            <th>Qty</th>
+                            <th>Revenue</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="prod : ${summary.topProducts}">
+                            <td th:text="${prod.sku}"></td>
+                            <td th:text="${prod.productName}"></td>
+                            <td th:text="${prod.category}"></td>
+                            <td th:text="${prod.totalQuantity}"></td>
+                            <td th:text="'$' + ${#numbers.formatDecimal(prod.totalRevenue, 1, 'COMMA', 2, 'POINT')}"></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <h2>Transactions (First 50 Shown)</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Branch</th>
+                    <th>Date</th>
+                    <th>Receipt #</th>
+                    <th>Product</th>
+                    <th>Category</th>
+                    <th>Qty</th>
+                    <th>Unit Price</th>
+                    <th>Discount</th>
+                    <th>Line Revenue</th>
+                    <th>Payment</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr th:each="tx, iterStat : ${transactions}" th:if="${iterStat.index < 50}">
+                    <td th:text="${tx.branch}"></td>
+                    <td th:text="${tx.date}"></td>
+                    <td th:text="${tx.receiptNo}"></td>
+                    <td th:text="${tx.productName}"></td>
+                    <td th:text="${tx.category}"></td>
+                    <td th:text="${tx.quantity}"></td>
+                    <td th:text="'$' + ${#numbers.formatDecimal(tx.unitPrice, 1, 'COMMA', 2, 'POINT')}"></td>
+                    <td th:text="'$' + ${#numbers.formatDecimal(tx.discount, 1, 'COMMA', 2, 'POINT')}"></td>
+                    <td th:text="'$' + ${#numbers.formatDecimal(tx.lineRevenue, 1, 'COMMA', 2, 'POINT')}"></td>
+                    <td th:text="${tx.paymentMethod}"></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</body>
+</html>
+
