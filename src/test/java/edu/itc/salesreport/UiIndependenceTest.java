@@ -22,7 +22,7 @@ class UiIndependenceTest {
                 sourceRoot.resolve("model"),
                 sourceRoot.resolve("ingest"),
                 sourceRoot.resolve("engine"),
-                sourceRoot.resolve("ui"),
+                sourceRoot.resolve("ui/console"),
                 sourceRoot.resolve("ui/mvp")
         );
 
@@ -51,4 +51,3 @@ class UiIndependenceTest {
                         + String.join("\n", violations));
     }
 }
-

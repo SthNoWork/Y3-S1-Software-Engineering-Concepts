@@ -5,9 +5,12 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.Random;
 
 public class SalesDataGenerator {
     private record ProductDef(String sku, String name, String category, double price) {}
@@ -30,8 +33,57 @@ public class SalesDataGenerator {
     private static final List<String> PAYMENTS = List.of("CASH", "CARD", "KHQR");
 
     public static void main(String[] args) throws IOException {
+        if (args.length >= 3) {
+            YearMonth month = YearMonth.parse(args[0]);
+            int rowsPerDay = Integer.parseInt(args[1]);
+            long seed = Long.parseLong(args[2]);
+            Path baseDir = Path.of(args.length > 3 ? args[3] : "data");
+            generateCustom(baseDir, month, rowsPerDay, seed);
+            return;
+        }
         Path baseDir = Path.of(args.length > 0 ? args[0] : "data");
         generate(baseDir);
+    }
+
+    public static void generateCustom(Path baseDir, YearMonth month, int rowsPerDay, long seed) throws IOException {
+        Path dir = baseDir.resolve(month.toString());
+        Files.createDirectories(dir);
+        Random random = new Random(seed);
+        int days = month.lengthOfMonth();
+        String[] payments = {"CASH", "CARD", "KHQR", "KHQR"};
+
+        for (String branch : List.of("PNH", "REP", "BTB")) {
+            int receipt = 0;
+            for (int d = 1; d <= days; d++) {
+                String dateStr = month.atDay(d).toString();
+                String filename = branch + "-" + dateStr + ".csv";
+                try (BufferedWriter writer = Files.newBufferedWriter(dir.resolve(filename), StandardCharsets.UTF_8)) {
+                    writer.write("branch,date,receipt_no,sku,product_name,category,quantity,unit_price,discount,payment_method\n");
+                    String payment = "CASH";
+                    for (int r = 0; r < rowsPerDay; r++) {
+                        if (r == 0 || random.nextInt(3) == 0) {
+                            receipt++;
+                            payment = payments[random.nextInt(payments.length)];
+                        }
+                        ProductDef p = PRODUCTS.get(random.nextInt(PRODUCTS.size()));
+                        int qty = 1 + random.nextInt(4);
+                        String discount = random.nextInt(10) == 0 ? "0.10" : "0.00";
+                        writer.write(String.join(",",
+                                branch,
+                                dateStr,
+                                String.format("%s-%06d", branch, receipt),
+                                p.sku(),
+                                p.name(),
+                                p.category(),
+                                String.valueOf(qty),
+                                String.format(Locale.US, "%.2f", p.price()),
+                                discount,
+                                payment));
+                        writer.write("\n");
+                    }
+                }
+            }
+        }
     }
 
     public static void generate(Path baseDir) throws IOException {
@@ -123,7 +175,7 @@ public class SalesDataGenerator {
             r.productName = p.name;
             r.category = p.category;
             r.quantity = qty;
-            r.unitPrice = String.format(java.util.Locale.US, "%.2f", p.price);
+            r.unitPrice = String.format(Locale.US, "%.2f", p.price);
             r.discount = "0.00";
             r.paymentMethod = payment;
             r.lineRevCents = lineRevCents;
@@ -156,7 +208,7 @@ public class SalesDataGenerator {
             RowData r = rows.get(0);
             int curRev = r.lineRevCents + diff;
             r.quantity = 1;
-            r.unitPrice = String.format(java.util.Locale.US, "%.2f", curRev / 100.0);
+            r.unitPrice = String.format(Locale.US, "%.2f", curRev / 100.0);
             r.discount = "0.00";
             r.lineRevCents = curRev;
         }
@@ -164,4 +216,3 @@ public class SalesDataGenerator {
         return rows;
     }
 }
-
